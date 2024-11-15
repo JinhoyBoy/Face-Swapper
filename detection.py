@@ -28,7 +28,7 @@ def display_bounding_box(image, bounding_box):
     return image
 
 # Load a new image for face detection
-image_path = "test_images/person.jpeg"
+image_path = "test_images/4.jpg"
 image = cv2.imread(image_path)
 
 # Preprocess the image

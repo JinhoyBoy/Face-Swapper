@@ -75,7 +75,7 @@ val_labels_single_box = np.array(val_labels_single_box)
 # Train model with simplified single-bounding-box data
 history = model.fit(
     train_images_single_box, train_labels_single_box,
-    epochs=20,
+    epochs=30,
     batch_size=32,
     validation_data=(val_images_single_box, val_labels_single_box)
 )
