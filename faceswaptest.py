@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+
 def extract_ellipse(image, center, axes, angle=0, start_angle=0, end_angle=360):
     # Erstelle eine leere Maske, die die gleiche Größe wie das Bild hat
     mask = np.zeros(image.shape[:2], dtype=np.uint8)
@@ -20,27 +21,36 @@ def extract_ellipse(image, center, axes, angle=0, start_angle=0, end_angle=360):
 
     return result
 
+
+image1_name = input("input image1 name and format: ")
+image2_name = input("input image2 name and format: ")
+
 # Lade das Bild
-image_path = 'test_images/image.png'  # Ersetze mit deinem Bildpfad
-image = cv2.imread(image_path)
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+image_path = 'test_images/' + image1_name  # Ersetze mit deinem Bildpfad
+image_path2 = 'test_images/' + image2_name  # Ersetze mit deinem Bildpfad
+
+image1 = cv2.imread(image_path)
+image2 = cv2.imread(image_path2)
+gray1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
+gray2 = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
 
 # Lade OpenCVs vortrainiertes Haar-Cascade für Gesichtsdetektion
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
 # Detectiere Gesichter im Bild
-faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+faces1 = face_cascade.detectMultiScale(gray1, scaleFactor=1.1, minNeighbors=5)
+faces2 = face_cascade.detectMultiScale(gray2, scaleFactor=1.1, minNeighbors=5)
 
-if len(faces) < 2:
-    print("Es müssen mindestens zwei Gesichter im Bild sein!")
+if len(faces1) < 1 or len(faces2) < 1:
+    print("각 이미지에서 최소한 하나의 얼굴이 필요합니다!")
 else:
     # Extrahiere die Regionen der Gesichter
-    x1, y1, w1, h1 = faces[0]
-    x2, y2, w2, h2 = faces[1]
+    x1, y1, w1, h1 = faces1[0]
+    x2, y2, w2, h2 = faces2[0]
 
     # Extrahiere die Gesichter aus den Rechtecken
-    face1 = image[y1:y1 + h1, x1:x1 + w1]
-    face2 = image[y2:y2 + h2, x2:x2 + w2]
+    face1 = image1[y1:y1 + h1, x1:x1 + w1]
+    face2 = image2[y2:y2 + h2, x2:x2 + w2]
 
     # Resize die Gesichter auf die Zielgröße
     face1_resized = cv2.resize(face1, (w2, h2))
@@ -48,16 +58,17 @@ else:
 
     # Berechne die Mittelpunkte und Achsen nach dem Resizing
     center1_resized = (w2 // 2, h2 // 2)  # Mittelpunkte nach Resize
-    axes1_resized = (w2 // 3, h2 // 2)    # Achsen nach Resize
+    axes1_resized = (w2 // 3, h2 // 2)  # Achsen nach Resize
     center2_resized = (w1 // 2, h1 // 2)  # Mittelpunkte nach Resize
-    axes2_resized = (w1 // 3, h1 // 2)    # Achsen nach Resize
+    axes2_resized = (w1 // 3, h1 // 2)  # Achsen nach Resize
 
     # Extrahiere die Ellipsen aus den resized Gesichtern
     face1_ellipse = extract_ellipse(face1_resized, center1_resized, axes1_resized)
     face2_ellipse = extract_ellipse(face2_resized, center2_resized, axes2_resized)
 
     # Erstelle ein Ergebnisbild, das das Originalbild kopiert
-    result = image.copy()
+    result1 = image1.copy()
+    result2 = image2.copy()
 
     # Extrahiere nur die ersten 3 Kanäle aus den resized Gesichtern (ignoriere den Alpha-Kanal)
     face1_resized_bgr = face1_ellipse[:, :, :3]  # Entferne den Alpha-Kanal
@@ -71,14 +82,16 @@ else:
     for i in range(h2):
         for j in range(w2):
             if face1_ellipse[i, j, 3] != 0:  # Nur nicht-transparente Pixel
-                result[y2 + i, x2 + j, :3] = face1_ellipse[i, j, :3]  # Kopiere BGR-Werte
+                result2[y2 + i, x2 + j, :3] = face1_ellipse[i, j, :3]  # Kopiere BGR-Werte
 
     for i in range(h1):
         for j in range(w1):
             if face2_ellipse[i, j, 3] != 0:  # Nur nicht-transparente Pixel
-                result[y1 + i, x1 + j, :3] = face2_ellipse[i, j, :3]  # Kopiere BGR-Werte
+                result1[y1 + i, x1 + j, :3] = face2_ellipse[i, j, :3]  # Kopiere BGR-Werte
 
     # Ergebnisbild anzeigen
-    cv2.imshow("Face Swap with Ellipses", result)
+    cv2.imshow("Face Swap with Ellipses image1", result1)
+    cv2.imshow("Face Swap with Ellipses image2", result2)
+
     cv2.waitKey(0)
     cv2.destroyAllWindows()
