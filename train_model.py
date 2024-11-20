@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import image_modules
 from sklearn.model_selection import train_test_split
 from keras import layers, models, callbacks, applications, Input
 
@@ -33,7 +34,7 @@ def load_images_and_labels(image_folder, labels_folder, target_size=(IMAGE_SIZE,
             img = cv2.imread(os.path.join(image_folder, filename))
             if img is None:  # Skip invalid images
                 continue
-            img = cv2.resize(img, target_size)  # Resize image to target size
+            img = image_modules.resize_image(img, target_size)  # Resize image to target size
             img = img / 255.0  # Normalize (pixel values between 0 and 1)
             
             images.append(img)
@@ -48,7 +49,7 @@ def load_images_and_labels(image_folder, labels_folder, target_size=(IMAGE_SIZE,
 
 # Load validation images and labels
 #val_images, val_labels = load_images_and_labels("valid/images", "valid/labels")
-train_images, train_labels = load_images_and_labels("train_full/images", "train_full/labels")
+train_images, train_labels = load_images_and_labels("train/images", "train/labels")
 print("Images and labels are loaded")
 
 # Split data into training and validation sets (20% for validation)

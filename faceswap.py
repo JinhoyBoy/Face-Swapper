@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import image_modules
 
 def extract_ellipse(image, center, axes, angle=0, start_angle=0, end_angle=360):
     # create a mask with the same shape as the image
@@ -7,13 +8,17 @@ def extract_ellipse(image, center, axes, angle=0, start_angle=0, end_angle=360):
 
     # draw the ellipse on the mask
     cv2.ellipse(mask, center, axes, angle, start_angle, end_angle, (255), -1)
+    #image_modules.draw_ellipse(mask, center, axes)
 
     # create an alpha mask
-    alpha_mask = cv2.merge([mask, mask, mask, mask])
+    alpha_mask = image_modules.merge_channels([mask, mask, mask, mask])
 
     # if the image has 3 channels, convert it to 4 channels
     if image.shape[2] == 3:
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
+        # Create an alpha channel filled with 255 (fully opaque)
+        alpha_channel = np.ones((image.shape[0], image.shape[1]), dtype=np.uint8) * 255
+        # Stack the original image with the alpha channel to form a BGRA image
+        image = np.dstack([image, alpha_channel])
 
     # apply the alpha mask to the image
     result = cv2.bitwise_and(image, alpha_mask)
@@ -21,7 +26,7 @@ def extract_ellipse(image, center, axes, angle=0, start_angle=0, end_angle=360):
     return result
 
 # load the image
-image_path = 'test_images/image.png' # path to the image
+image_path = 'application_images/image.png' # path to the image
 image = cv2.imread(image_path)
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -41,8 +46,8 @@ else:
     face2 = image[y2:y2 + h2, x2:x2 + w2]
 
     # resize the faces to the same size
-    face1_resized = cv2.resize(face1, (w2, h2))
-    face2_resized = cv2.resize(face2, (w1, h1))
+    face1_resized = image_modules.resize_image(face1, (w2, h2))
+    face2_resized = image_modules.resize_image(face2, (w1, h1))
 
     # calculate the center and axes of the ellipses
     center1_resized = (w2 // 2, h2 // 2)  # center after resize
