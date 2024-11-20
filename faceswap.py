@@ -21,7 +21,7 @@ def extract_ellipse(image, center, axes, angle=0, start_angle=0, end_angle=360):
         image = np.dstack([image, alpha_channel])
 
     # apply the alpha mask to the image
-    result = cv2.bitwise_and(image, alpha_mask)
+    result = image_modules.bitwise_and(image, alpha_mask)
 
     return result
 

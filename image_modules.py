@@ -1,9 +1,11 @@
 import numpy as np
 
+# replaces cv2.merge
 def merge_channels(channels):
     # Stack the individual channels along the last axis to create a multi-channel image (e.g., RGB or RGBA)
     return np.stack(channels, axis=-1)
 
+# replaces cv2.resize
 def resize_image(image, new_size):
     # Extract the new height and width from the new_size tuple
     height, width = new_size
@@ -26,3 +28,14 @@ def resize_image(image, new_size):
             new_image[i, j] = image[orig_y, orig_x]
 
     return new_image
+
+# replaces cv2.bitwise_and
+def bitwise_and(image1, image2):
+    # Ensure both images are of the same size and number of channels
+    if image1.shape != image2.shape:
+        raise ValueError("The input images must have the same shape.")
+
+    # Perform the bitwise AND operation pixel by pixel for all channels
+    result = np.bitwise_and(image1, image2)
+
+    return result
