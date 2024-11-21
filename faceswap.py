@@ -1,12 +1,14 @@
 import cv2
 import numpy as np
+import ellipse
 
 def extract_ellipse(image, center, axes, angle=0, start_angle=0, end_angle=360):
     # create a mask with the same shape as the image
     mask = np.zeros(image.shape[:2], dtype=np.uint8)
 
     # draw the ellipse on the mask
-    cv2.ellipse(mask, center, axes, angle, start_angle, end_angle, (255), -1)
+    # cv2.ellipse(mask, center, axes, angle, start_angle, end_angle, (255), -1)
+    ellipse.draw_ellipse(mask, center, axes, angle, start_angle, end_angle, (255), -1)
 
     # create an alpha mask
     alpha_mask = cv2.merge([mask, mask, mask, mask])
