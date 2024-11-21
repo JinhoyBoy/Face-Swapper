@@ -5,10 +5,10 @@ import image_modules
 def extract_ellipse(image, center, axes, angle=0, start_angle=0, end_angle=360):
     # create a mask with the same shape as the image
     mask = np.zeros(image.shape[:2], dtype=np.uint8)
-
+ 
     # draw the ellipse on the mask
-    cv2.ellipse(mask, center, axes, angle, start_angle, end_angle, (255), -1)
-    #image_modules.draw_ellipse(mask, center, axes)
+    #cv2.ellipse(mask, center, axes, angle, start_angle, end_angle, (255), -1)
+    image_modules.draw_filled_ellipse(mask, center, axes, angle, 255)
 
     # create an alpha mask
     alpha_mask = image_modules.merge_channels([mask, mask, mask, mask])
