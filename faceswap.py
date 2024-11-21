@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import image_modules
+import matplotlib.pyplot as plt
 
 
 def extract_ellipse(image, center, axes, angle=0, start_angle=0, end_angle=360):
@@ -92,8 +93,34 @@ else:
                 result1[y1 + i, x1 + j, :3] = face2_ellipse[i, j, :3]  # copy BGR values
 
     # show the result
+    '''
     cv2.imshow("Face Swap with Ellipses", result1)
+    cv2.waitKey(0)
+
     cv2.imshow("Face Swap with Ellipses", result2)
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+    '''
+
+    plt.figure(figsize=(10, 6))
+
+    plt.subplot(1, 3, 1)
+    plt.imshow(cv2.cvtColor(image1, cv2.COLOR_BGR2RGB))
+    plt.title('Source Image')
+    plt.axis('off')
+
+    plt.subplot(1, 3, 2)
+    plt.imshow(cv2.cvtColor(image2, cv2.COLOR_BGR2RGB))
+    plt.title('Image to be changed')
+    plt.axis('off')
+
+    plt.subplot(1, 3, 3)
+    plt.imshow(cv2.cvtColor(result2, cv2.COLOR_BGR2RGB))
+    plt.title('Result Image')
+    plt.axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+    
