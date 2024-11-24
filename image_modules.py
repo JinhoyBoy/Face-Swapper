@@ -57,33 +57,3 @@ def draw_ellipse(img, center, axes, angle, start_angle, end_angle, color):
         if 0 <= px < img.shape[1] and 0 <= py < img.shape[0]: # 이미지 범위 내 점만 그림 
             img[py, px] = color
 '''
-
-def draw_filled_ellipse(img, center, axes, angle, color):
-    h, k = center  # Center of the ellipse
-    a, b = axes  # Semi-major and semi-minor axes
-    angle = math.radians(angle)  # Convert rotation angle to radians
-
-    # Compute cosine and sine of the rotation angle once
-    cos_angle = math.cos(angle)
-    sin_angle = math.sin(angle)
-
-    # Define the bounding box of the ellipse
-    min_x = max(0, int(h - a))
-    max_x = min(img.shape[1], int(h + a))
-    min_y = max(0, int(k - b))
-    max_y = min(img.shape[0], int(k + b))
-
-    # Loop over the bounding box and check if points are inside the ellipse
-    for px in range(min_x, max_x):
-        for py in range(min_y, max_y):
-            # Translate the point to the ellipse's local coordinates
-            x = px - h
-            y = py - k
-
-            # Apply the reverse rotation to the point
-            x_rot = x * cos_angle + y * sin_angle
-            y_rot = -x * sin_angle + y * cos_angle
-
-            # Check if the point is inside the ellipse using the standard equation
-            if (x_rot ** 2) / (a ** 2) + (y_rot ** 2) / (b ** 2) <= 1:
-                img[py, px] = color
