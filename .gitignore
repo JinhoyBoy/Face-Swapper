@@ -1,1 +1,3 @@
 face_detection_model.keras
+__pycache__
+.venv

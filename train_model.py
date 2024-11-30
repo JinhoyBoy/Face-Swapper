@@ -2,10 +2,11 @@ import os
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import image_modules
 from sklearn.model_selection import train_test_split
 from keras import layers, models, callbacks, applications, Input
 
-IMAGE_SIZE = 224
+IMAGE_SIZE = 360
 
 # Function to load images and labels
 def load_images_and_labels(image_folder, labels_folder, target_size=(IMAGE_SIZE, IMAGE_SIZE)):
@@ -33,7 +34,7 @@ def load_images_and_labels(image_folder, labels_folder, target_size=(IMAGE_SIZE,
             img = cv2.imread(os.path.join(image_folder, filename))
             if img is None:  # Skip invalid images
                 continue
-            img = cv2.resize(img, target_size)  # Resize image to target size
+            img = image_modules.resize_image(img, target_size)  # Resize image to target size
             img = img / 255.0  # Normalize (pixel values between 0 and 1)
             
             images.append(img)
@@ -48,7 +49,7 @@ def load_images_and_labels(image_folder, labels_folder, target_size=(IMAGE_SIZE,
 
 # Load validation images and labels
 #val_images, val_labels = load_images_and_labels("valid/images", "valid/labels")
-train_images, train_labels = load_images_and_labels("train_full/images", "train_full/labels")
+train_images, train_labels = load_images_and_labels("train/images", "train/labels")
 print("Images and labels are loaded")
 
 # Split data into training and validation sets (20% for validation)
@@ -88,25 +89,6 @@ def create_face_detection_model(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3)):
     model = models.Model(inputs=inputs, outputs=outputs)
     
     return model
-
-'''
-def create_transfer_learning_model(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3)):
-    # Load the MobileNetV2 model without the top layer
-    base_model = applications.MobileNetV2(weights='imagenet', include_top=False, input_shape=input_shape)
-    base_model.trainable = False  # Freeze the base model
-
-    # Add custom layers for bounding box regression
-    inputs = Input(shape=input_shape)
-    x = base_model(inputs, training=False)
-    x = layers.GlobalAveragePooling2D()(x)  # Global pooling for feature reduction
-    x = layers.Dense(512, activation='relu')(x)
-    x = layers.Dropout(0.3)(x)
-    outputs = layers.Dense(4)(x)  # Output layer for (x, y, width, height)
-
-    # Create the model
-    model = models.Model(inputs, outputs)
-    return model
-'''
 
 # Create the model
 model = create_face_detection_model()
