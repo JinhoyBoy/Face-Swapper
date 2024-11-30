@@ -18,7 +18,7 @@ def resize_image(image, new_size):
     return new_image
 
 # Load an image using OpenCV
-image = cv2.imread('application_images/1.jpg')  # Replace 'image.jpg' with your image path
+image = cv2.imread('application_images/Depp.jpg')  # Replace 'image.jpg' with your image path
 
 # Define the new size for the image
 new_size = (200, 300)  # Example: resizing to 200x300 pixels
@@ -33,17 +33,17 @@ opencv_resized_image = cv2.resize(image, (new_size[1], new_size[0]))
 plt.figure(figsize=(10, 6))
 
 plt.subplot(1, 3, 1)
-plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+plt.imshow(image[:, :, ::-1])
 plt.title('Original Image')
 plt.axis('off')
 
 plt.subplot(1, 3, 2)
-plt.imshow(cv2.cvtColor(manual_resized_image, cv2.COLOR_BGR2RGB))
+plt.imshow(manual_resized_image[:, :, ::-1])
 plt.title('Manually Resized Image')
 plt.axis('off')
 
 plt.subplot(1, 3, 3)
-plt.imshow(cv2.cvtColor(opencv_resized_image, cv2.COLOR_BGR2RGB))
+plt.imshow(opencv_resized_image[:, :, ::-1])
 plt.title('OpenCV Resized Image')
 plt.axis('off')
 

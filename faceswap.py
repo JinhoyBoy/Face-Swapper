@@ -1,122 +1,203 @@
 import cv2
+import keras
 import numpy as np
 import image_modules
 import matplotlib.pyplot as plt
 
+# Load the trained model
+IMAGE_SIZE = 360
+MODEL = keras.models.load_model("face_detection_model.keras")
 
-def extract_ellipse(image, center, axes, angle=0, start_angle=0, end_angle=360):
-    # create a mask with the same shape as the image
-    mask = np.zeros(image.shape[:2], dtype=np.uint8)
+# Function to preprocess the image
+def preprocess_image(image, target_size=(IMAGE_SIZE, IMAGE_SIZE)):
+    img = image_modules.resize_image(image, target_size)  # Resize image to target size
+    img = img / 255.0  # Normalize pixel values to [0, 1]
+    img = np.expand_dims(img, axis=0)  # Add batch dimension
+    return img
 
-    # draw the ellipse on the mask
-    # cv2.ellipse(mask, center, axes, angle, start_angle, end_angle, (255), -1)
-    image_modules.draw_filled_ellipse(mask, center, axes, angle, 255)
+# Function to make a bounding box from the predicted center coordinates
+def make_bounding_box(bounding_box, original_shape):
+    h_orig, w_orig = original_shape[:2]
+    cx, cy, w, h = bounding_box  # Assume cx, cy are the center coordinates
 
-    # create an alpha mask
-    alpha_mask = image_modules.merge_channels([mask, mask, mask, mask])
+    # Convert bounding box from normalized center coordinates to pixel coordinates
+    cx = int(cx * w_orig)
+    cy = int(cy * h_orig)
+    w = int(w * w_orig)
+    h = int(h * h_orig)
 
-    # if the image has 3 channels, convert it to 4 channels
+    # Determine the side length of the square
+    side_length = max(w, h)
+
+    # Calculate the top-left corner (x, y) for the square box
+    x = int(cx - side_length // 2)
+    y = int(cy - side_length // 2)
+
+    # Ensure the square box does not go outside the image boundaries
+    if x < 0:
+        x = 0
+    if x + side_length > w_orig:
+        side_length = w_orig - x
+
+    if y < 0:
+        y = 0
+    if y + side_length > h_orig:
+        side_length = h_orig - y
+
+    return np.array([x, y, side_length, side_length])
+
+
+# Function to generate an ellipse gradient mask
+def generate_ellipse_gradient_mask(image_shape, center, axes, angle=0):
+    height, width = image_shape[:2]
+    
+    # Create an empty array to store the gradient mask (2D array)
+    gradient_mask = np.zeros((height, width), dtype=np.float32)
+    
+    # Calculate the gradient based on the ellipse equation
+    for y in range(height):
+        for x in range(width):
+            # Check if the point lies inside the ellipse
+            dx = (x - center[0]) * np.cos(angle) + (y - center[1]) * np.sin(angle)
+            dy = -(x - center[0]) * np.sin(angle) + (y - center[1]) * np.cos(angle)
+            
+            # Ellipse equation (x^2 / a^2 + y^2 / b^2 <= 1)
+            ellipse_distance = (dx ** 2) / (axes[0] ** 2) + (dy ** 2) / (axes[1] ** 2)
+            
+            if ellipse_distance <= 1:
+                # Inside the ellipse: Apply gradient (more transparent towards the edges)
+                gradient_mask[y, x] = np.sqrt(1 - ellipse_distance)  # Value between 0 and 1
+            else:
+                gradient_mask[y, x] = 0  # Outside the ellipse is 0 (transparent)
+    
+    return gradient_mask
+
+# Function to extract an ellipse with gradient effect
+def extract_ellipse_with_gradient(image, center, axes, angle=0):
+    # Create a gradient mask with the ellipse effect
+    gradient_mask = generate_ellipse_gradient_mask(image.shape, center, axes, angle)
+    
+    # Apply the mask to the image (convert to BGRA image with alpha channel)
     if image.shape[2] == 3:
-        # Create an alpha channel filled with 255 (fully opaque)
+        # Add an alpha channel
         alpha_channel = np.ones((image.shape[0], image.shape[1]), dtype=np.uint8) * 255
-        # Stack the original image with the alpha channel to form a BGRA image
         image = np.dstack([image, alpha_channel])
+    
+    # gradient_mask should be in (height, width) format
+    # Apply the gradient mask to the alpha channel (values should be scaled to [0, 255])
+    image[..., 3] = (gradient_mask * 255).astype(np.uint8)  # Apply gradient to the alpha channel
+    
+    return image
 
-    # apply the alpha mask to the image
-    result = image_modules.bitwise_and(image, alpha_mask)
+def resize_image_with_aspect_ratio(image, max_width=None, max_height=None):
+    # Get the original dimensions
+    h, w = image.shape[:2]
 
-    return result
+    # Calculate the scaling factor
+    if max_width is not None and max_height is not None:
+        scale = min(max_width / w, max_height / h)
+    elif max_width is not None:
+        scale = max_width / w
+    elif max_height is not None:
+        scale = max_height / h
+    else:
+        raise ValueError("At least one of max_width or max_height must be specified.")
 
-image1_name = input("input image1 name and format: ")
-image2_name = input("input image2 name and format: ")
+    # Ensure scale is <= 1 (only reduce size)
+    scale = min(scale, 1.0)
 
-# load the image
-image_path1 = 'application_images/' + image1_name  # path to the image
-image_path2 = 'application_images/' + image2_name  # path to the image
+    # Calculate new dimensions
+    new_width = int(w * scale)
+    new_height = int(h * scale)
+
+    # Resize the image
+    resized_image = image_modules.resize_image(image, (new_height, new_width))
+
+    return resized_image
+
+# Face extraction and swapping (same as original code)
+image1_name = input("input source image (image1) name and format: ")
+image2_name = input("input swap image (image2) name and format: ")
+
+# Load the images
+image_path1 = 'application_images/' + image1_name
+image_path2 = 'application_images/' + image2_name
 
 image1 = cv2.imread(image_path1)
 image2 = cv2.imread(image_path2)
-gray1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
-gray2 = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
 
-# load the face cascade classifier
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+image2 = resize_image_with_aspect_ratio(image2, max_width=800)
 
-# detect faces in the image
-faces1 = face_cascade.detectMultiScale(gray1, scaleFactor=1.1, minNeighbors=5)
-faces2 = face_cascade.detectMultiScale(gray2, scaleFactor=1.1, minNeighbors=5)
+if image1.shape != image2.shape:
+    print("The images must have the same shape. resizing the first image to be the same shape.")
+    image1 = image_modules.resize_image(image1, (image2.shape[0], image2.shape[1]))
 
-if len(faces1) < 1 or len(faces2) < 1:
+# prediction
+image1_resized = image_modules.resize_image(image1, (IMAGE_SIZE, IMAGE_SIZE)) # model input size is 360x360
+image2_resized = image_modules.resize_image(image2, (IMAGE_SIZE, IMAGE_SIZE)) # model input size is 360x360
+
+input_image1 = preprocess_image(image1_resized)
+input_image2 = preprocess_image(image2_resized)
+
+predicted_box1 = make_bounding_box(MODEL.predict(input_image1)[0], image2.shape)
+predicted_box2 = make_bounding_box(MODEL.predict(input_image2)[0], image1.shape)
+
+print("Source Image shape:", image1.shape)
+print("Result Image shape:", image2.shape)
+print("Predicted bounding box for image1:", predicted_box1)
+print("Predicted bounding box for image2:", predicted_box2)
+
+# Face swapping
+if predicted_box1 is None or predicted_box2 is None:
     print("There has to be at least two faces in the image.")
 else:
-    # extract the bounding boxes of the first two faces
-    x1, y1, w1, h1 = faces1[0]
-    x2, y2, w2, h2 = faces2[0]
+    # Extract faces and resize
+    x1, y1, w1, h1 = predicted_box1
+    x2, y2, w2, h2 = predicted_box2
     face1 = image1[y1:y1 + h1, x1:x1 + w1]
-    face2 = image2[y2:y2 + h2, x2:x2 + w2]
-
-    # resize the faces to the same size
+    
+    # Resize the faces
     face1_resized = image_modules.resize_image(face1, (w2, h2))
-    face2_resized = image_modules.resize_image(face2, (w1, h1))
 
-    # calculate the center and axes of the ellipses
-    center1_resized = (w2 // 2, h2 // 2)  # center after resize
-    axes1_resized = (w2 // 3, h2 // 2)  # axes after resize
-    center2_resized = (w1 // 2, h1 // 2)  # center after resize
-    axes2_resized = (w1 // 3, h1 // 2)  # axes after resize
+    # Define the center and axes of the ellipses
+    center1_resized = (w2 // 2, h2 // 2)
+    axes1_resized = (w2 // 3, h2 // 2)
 
-    # extract the ellipses from the resized faces
-    face1_ellipse = extract_ellipse(face1_resized, center1_resized, axes1_resized)
-    face2_ellipse = extract_ellipse(face2_resized, center2_resized, axes2_resized)
+    # Extract ellipses with gradient
+    face1_ellipse = extract_ellipse_with_gradient(face1_resized, center1_resized, axes1_resized)
 
-    # create a copy of the original image
-    result1 = image1.copy()
-    result2 = image2.copy()
+    # Create result images
+    result = image2.copy()
 
-    # extract the BGR channels of the ellipses
-    face1_resized_bgr = face1_ellipse[:, :, :3]
-    face2_resized_bgr = face2_ellipse[:, :, :3]
+    # Extract BGR channels and alpha channels from face1_ellipse and face2_ellipse
+    face1_bgr = face1_ellipse[:, :, :3]  # BGR channels
+    face1_alpha = face1_ellipse[:, :, 3]  # Alpha channel
 
-    # extract the alpha channels of the ellipses
-    alpha1 = face1_ellipse[:, :, 3]
-    alpha2 = face2_ellipse[:, :, 3]
+    # Composite the alpha channels into result2's alpha channel
+    # Composite only the parts where the alpha channel is not 0
+    for i in range(min(h2, result.shape[0] - y2)):
+        for j in range(min(w2, result.shape[1] - x2)):
+            if face1_alpha[i, j] != 0:
+                blend_factor = face1_alpha[i, j] / 255.0
+                pixel = result[y2 + i, x2 + j, :3] * (1 - blend_factor) + face1_bgr[i, j] * blend_factor
+                pixel = np.clip(pixel, 0, 255)
+                result[y2 + i, x2 + j, :3] = pixel
 
-    # overlay the ellipses on the original image
-    for i in range(h2):
-        for j in range(w2):
-            if face1_ellipse[i, j, 3] != 0:  # only non-transparent pixels
-                result2[y2 + i, x2 + j, :3] = face1_ellipse[i, j, :3]  # copy BGR values
-
-    for i in range(h1):
-        for j in range(w1):
-            if face2_ellipse[i, j, 3] != 0:  # only non-transparent pixels
-                result1[y1 + i, x1 + j, :3] = face2_ellipse[i, j, :3]  # copy BGR values
-
-    # show the result
-    '''
-    cv2.imshow("Face Swap with Ellipses", result1)
-    cv2.waitKey(0)
-
-    cv2.imshow("Face Swap with Ellipses", result2)
-
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    '''
-
-    plt.figure(figsize=(10, 6))
+    # Display the images
+    plt.figure(figsize=(10, 6), num="Face Swapping")
 
     plt.subplot(1, 3, 1)
-    plt.imshow(cv2.cvtColor(image1, cv2.COLOR_BGR2RGB))
+    plt.imshow(image1[:, :, ::-1]) # Convert BGR to RGB
     plt.title('Source Image')
     plt.axis('off')
 
     plt.subplot(1, 3, 2)
-    plt.imshow(cv2.cvtColor(image2, cv2.COLOR_BGR2RGB))
-    plt.title('Image to be changed')
+    plt.imshow(image2[:, :, ::-1]) # Convert BGR to RGB
+    plt.title('Image to Swap')
     plt.axis('off')
 
     plt.subplot(1, 3, 3)
-    plt.imshow(cv2.cvtColor(result2, cv2.COLOR_BGR2RGB))
+    plt.imshow(result[:, :, ::-1]) # Convert BGR to RGB
     plt.title('Result Image')
     plt.axis('off')
 
