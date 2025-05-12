@@ -12,7 +12,7 @@ The model for face bounding box detection was defined and trained in `train_mode
 
 
 
-## Resources
+## Technologies
 
 **Machine Learning:** Keras/Tensorflow
 
@@ -21,4 +21,4 @@ The model for face bounding box detection was defined and trained in `train_mode
 
 ## Screenshots
 
-![App Screenshot](https://i.ibb.co/vv0VYnt/Bildschirmfoto-2024-11-30-um-13-51-46.png)
+![App Screenshot](./application_images/results.png)
